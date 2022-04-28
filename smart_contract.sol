@@ -38,8 +38,8 @@ contract VREF is ERC20 {
 
     function buyToken(uint amount, uint expected) public {
         require(status, "Contract is maintaining");
-        require(amount > 0, "Please input amount greater than 0");
         if (msg.sender !=  withdrawAddress) {
+            require(amount > 0, "Please input amount greater than 0");
             require(IERC20(USDC).transferFrom(msg.sender, address(this), amount), "transfer USDC failed");
         } else {
             uint realMoneyInPool = IERC20(USDC).balanceOf(address(this)) * 10**decimalUSDC; // USDC uses 6 decimal places of precision, convert to 18

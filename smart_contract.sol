@@ -186,7 +186,6 @@ contract VREF is ERC20 {
 
         _transfer(address(this), msg.sender, tokenMint + tokenTransferForUser);
 
-        moneyWithdrawed += withdrawThisTime * 10**decimalUSDC;
+        moneyWithdrawed += withdrawThisTime ;
         emit withdraw(withdrawThisTime);
     }
-}

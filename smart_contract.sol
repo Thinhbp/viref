@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.10;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "hardhat/console.sol";
 abstract contract usdc {
     function decimals() external virtual returns (uint256) ;
 }
@@ -9,15 +10,13 @@ contract VREF is ERC20 {
     constructor() ERC20("Virtual Referral Network", "VREF") {
     }
 
-    address USDC = 0x773F48015ec59B2220339dda0E01C3Ad1B5968DD; //For Testnet
+    address USDC = 0xD867D16EB1F8446300276f4c625040d391968e0b; // 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 at ETH
     uint decimalUSDC = 18 - usdc(USDC).decimals() ; // 0 at BSC and 12 at ETH
     bool public status = true; 
     address owner = msg.sender;
     address withdrawAddress = msg.sender;
     uint public _tokenInPool;
     uint public _moneyInPool;
- 
-    uint public currentMoney;
     enum statusEnum { ICO, IDO, subIDO }
     statusEnum public state = statusEnum.ICO;
     uint public currentStep = 0;
@@ -38,15 +37,31 @@ contract VREF is ERC20 {
     event changestatus(bool _status);
     event withdraw(uint _amount);
 
-    function tokenIwillReceive(uint amount) private returns(uint tokenMint, uint tokenTransferForUser) {
+    function buyToken(uint amount, uint expected) public {
+        require(status, "Contract is maintaining");
+        require(amount > 0, "Please input amount greater than 0");
+        if (msg.sender !=  withdrawAddress) {
+            require(IERC20(USDC).transferFrom(msg.sender, address(this), amount), "transfer USDC failed");
+        } else {
+            uint realMoneyInPool = IERC20(USDC).balanceOf(address(this)) * 10**decimalUSDC; // USDC uses 6 decimal places of precision, convert to 18
+            uint moneyCanWithdraw = _tokenInPool*_moneyInPool/totalSupply() + realMoneyInPool+moneyWithdrawed-_moneyInPool;
+            // _tokenInPool*_moneyInPool/totalSupply() : money unused base on AMM algorithm
+            // most of time, realMoneyInPool = _moneyInPool-moneyWithdrawed , sometime, someone may send USDC to this address without any further action
+            uint withdrawThisTime = (moneyCanWithdraw - moneyWithdrawed)/ 10**decimalUSDC;
+            require(withdrawThisTime > 0, "no money can withdraw");
+            moneyWithdrawed += withdrawThisTime * 10**decimalUSDC;
+            amount = withdrawThisTime;
+        }
         uint nextBreak;
         uint assumingToken;
         uint buyNowCost = 0;
         uint buyNowToken;
-        currentMoney = _moneyInPool;
-        
+
+        amount = amount * 10**decimalUSDC; // Base on USDC's decimal, convert to 18
+        uint tokenMint = 0;
+        uint tokenTransferForUser = 0;
+        uint currentMoney = _moneyInPool;
         uint moneyLeft = amount;
- 
 
         while (moneyLeft > 0) {
             if (state == statusEnum.ICO) {
@@ -95,19 +110,6 @@ contract VREF is ERC20 {
             }
             moneyLeft = moneyLeft - buyNowCost;
         }
-
-    }
-
-    function buyToken(uint amount, uint expected) public {
-        require(status, "Contract is maintaining");
-        require(amount > 0, "Please input amount greater than 0");
-        require(IERC20(USDC).transferFrom(msg.sender, address(this), amount), "transfer USDC failed");
-        uint tokenMint;
-        uint tokenTransferForUser;
-        amount = amount * 10**decimalUSDC;  // Base on USDC's decimal, convert to 18
-
-        (tokenMint, tokenTransferForUser) = tokenIwillReceive(amount);
-
         require(tokenTransferForUser+tokenMint >= expected, "price slippage detected");
         require(_moneyInPool-currentMoney == amount, "something wrong with money");
 
@@ -126,7 +128,7 @@ contract VREF is ERC20 {
         if (state == statusEnum.ICO) {
             poolConstant = _tokenInPool * _moneyInPool;
         }
-        currentMoney = _moneyInPool;
+        uint currentMoney = _moneyInPool;
         uint moneyInpool = poolConstant / (_tokenInPool + amount);
         uint receivedMoney = currentMoney - moneyInpool;
         require(receivedMoney >= expected, "price slippage detected");
@@ -170,22 +172,4 @@ contract VREF is ERC20 {
         _transfer(address(this), withdrawAddress, wastedToken);
     }
 
-
-    function withdrawToken() public {
-        require(msg.sender == withdrawAddress, "permission denied");
-        uint realMoneyInPool = IERC20(USDC).balanceOf(address(this)) * 10**decimalUSDC; // USDC uses 6 decimal places of precision, convert to 18
-        uint moneyCanWithdraw = _tokenInPool*_moneyInPool/totalSupply() + realMoneyInPool+moneyWithdrawed-_moneyInPool;
-        uint withdrawThisTime = (moneyCanWithdraw - moneyWithdrawed);
-        require(withdrawThisTime > 0, "no money can withdraw");
-        uint tokenMint;
-        uint tokenTransferForUser;
-        (tokenMint, tokenTransferForUser) = tokenIwillReceive(withdrawThisTime);
-        if (tokenMint > 0)  {
-            _mint(address(this), tokenMint*2);
-        }
-
-        _transfer(address(this), msg.sender, tokenMint + tokenTransferForUser);
-
-        moneyWithdrawed += withdrawThisTime ;
-        emit withdraw(withdrawThisTime);
-    }
+}

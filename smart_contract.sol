@@ -9,7 +9,7 @@ contract VREF is ERC20 {
     constructor() ERC20("Virtual Referral Network", "VREF") {
     }
 
-    address USDC = 0x953b4EA944dBE1b65BCB968cE1d2BF38A902ACc1; // 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 at ETH
+    address USDC = 0x953b4EA944dBE1b65BCB968cE1d2BF38A902ACc1; // For Rinkeby Testnet
     uint decimalUSDC = 18 - usdc(USDC).decimals() ; // 0 at BSC and 12 at ETH
     bool public status = true; 
     address owner = msg.sender;

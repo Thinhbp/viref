@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.10;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "hardhat/console.sol";
 abstract contract usdc {
     function decimals() external virtual returns (uint256) ;
 }
@@ -48,15 +47,11 @@ contract VREF is ERC20 {
             
             uint realMoneyInPool = IERC20(USDC).balanceOf(address(this)) * 10**decimalUSDC;
             uint moneyCanWithdraw = _tokenInPool*_moneyInPool/totalSupply() + realMoneyInPool - (_moneyInPool - moneyWithdrawed); 
-            console.log(_moneyInPool);
-            console.log(moneyCanWithdraw);
             // _tokenInPool*_moneyInPool/totalSupply() : money unused base on AMM algorithm
             // most of time, realMoneyInPool = _moneyInPool-moneyWithdrawed , sometime, someone may send USDC to this address without any further action
             require(moneyCanWithdraw > moneyWithdrawed, "no money can withdraw");
             uint withdrawThisTime = moneyCanWithdraw - moneyWithdrawed;
             amount = amount*10**decimalUSDC < withdrawThisTime ? amount*10**decimalUSDC : withdrawThisTime;
-            console.log(amount);
-            console.log(moneyWithdrawed);
             moneyWithdrawed +=  amount ;
 
         }
